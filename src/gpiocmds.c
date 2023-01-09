@@ -175,6 +175,76 @@ DECL_COMMAND(command_queue_digital_out,
              "queue_digital_out oid=%c clock=%u on_ticks=%u");
 
 void
+command_update_digital_out_pwm_value(uint32_t *args)
+{
+    struct digital_out_s *d = oid_lookup(args[0], command_config_digital_out);
+    const uint32_t on_duration = args[1];
+
+    irq_disable();
+    const uint32_t now = timer_read_time();
+    uint8_t flags = d->flags;
+
+    uint32_t new_end_time = now + d->max_duration;
+    if (!move_queue_empty(&d->mq)) {
+        const struct move_node *nn = move_queue_first(&d->mq);
+        uint32_t wake = container_of(nn, struct digital_move, node)->waketime;
+        if (timer_is_before(wake, new_end_time))
+        {
+            new_end_time = wake;
+        }
+    }
+
+    if (on_duration >= d->cycle_time || on_duration == 0) {
+        sched_del_timer(&d->timer);
+        flags &= ~DF_TOGGLING;
+
+        const uint8_t pin_on = (on_duration != 0);
+        if (!pin_on != !(flags & DF_ON)) {
+            gpio_out_write(d->pin, pin_on ? DF_ON : 0);
+            flags ^= DF_ON;
+        }
+        if (d->max_duration) {
+            if (!pin_on != !(flags & DF_DEFAULT_ON)) {
+                // We're off default and have a max duration - need to either
+                // get another update via this call or have a scheduled event
+                // trigger in time
+                d->end_time = new_end_time;
+                d->timer.waketime = new_end_time;
+                d->timer.func = digital_load_event;
+                flags |= DF_CHECK_END;
+                sched_add_timer(&d->timer);
+            } else {
+                // On the default state, we don't need a check against duration.
+                flags &= ~DF_CHECK_END;
+            }
+        }
+    } else {
+        d->on_duration = on_duration;
+        d->off_duration = d->cycle_time - on_duration;
+        if (!(flags & DF_TOGGLING)) {
+            sched_del_timer(&d->timer);
+            flags = (flags | DF_TOGGLING) & ~DF_ON;
+            d->timer.func = digital_toggle_event;
+            d->timer.waketime = now + d->off_duration;
+            if (timer_is_before(new_end_time, d->timer.waketime)) {
+                // We have a scheduled event first, wake then
+                d->timer.waketime = new_end_time;
+            }
+            gpio_out_write(d->pin, 0);
+            sched_add_timer(&d->timer);
+        }
+        if (d->max_duration) {
+            d->end_time = new_end_time;
+            flags |= DF_CHECK_END;
+        }
+    }
+    d->flags = flags;
+    irq_enable();
+}
+DECL_COMMAND(command_update_digital_out_pwm_value,
+             "update_digital_out_pwm_value oid=%c on_ticks=%u");
+
+void
 command_update_digital_out(uint32_t *args)
 {
     struct digital_out_s *d = oid_lookup(args[0], command_config_digital_out);
