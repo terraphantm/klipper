@@ -343,6 +343,8 @@ class MCU_pwm:
                                      on_restart=True)
             self._set_cmd = self._mcu.lookup_command(
                 "queue_pwm_out oid=%c clock=%u value=%hu", cq=cmd_queue)
+            self._set_cmd_immediate = self._mcu.lookup_command(
+                "pwm_out_immediate oid=%c value=%hu", cq=cmd_queue)
             return
         # Software PWM
         if self._shutdown_value not in [0., 1.]:
@@ -370,6 +372,8 @@ class MCU_pwm:
             % (self._oid, self._last_clock, svalue), is_init=True)
         self._set_cmd = self._mcu.lookup_command(
             "queue_digital_out oid=%c clock=%u on_ticks=%u", cq=cmd_queue)
+        self._set_cmd_immediate = self._mcu.lookup_command(
+            "update_digital_out_pwm_value oid=%c on_ticks=%u", cq=cmd_queue)
         self._set_cycle_ticks = self._mcu.lookup_command(
             "set_digital_out_pwm_cycle oid=%c cycle_ticks=%u", cq=cmd_queue)
     def set_pwm(self, print_time, value, cycle_time=None):
@@ -397,6 +401,18 @@ class MCU_pwm:
         on_ticks = int(max(0., min(1., value)) * float(cycle_ticks) + 0.5)
         self._set_cmd.send([self._oid, clock, on_ticks],
                            minclock=minclock, reqclock=clock)
+    def set_pwm_immediate(self, value):
+        if self._invert:
+            value = 1. - value
+        if self._hardware_pwm:
+            v = int(max(0., min(1., value)) * self._pwm_max + 0.5)
+            self._set_cmd_immediate.send([self._oid, v])
+            return
+        # Soft pwm update
+        cycle_time = self._cycle_time
+        cycle_ticks = self._mcu.seconds_to_clock(cycle_time)
+        on_ticks = int(max(0., min(1., value)) * float(cycle_ticks) + 0.5)
+        self._set_cmd_immediate.send([self._oid, on_ticks])
 
 class MCU_adc:
     def __init__(self, mcu, pin_params):
