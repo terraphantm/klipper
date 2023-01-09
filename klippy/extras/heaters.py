@@ -66,7 +66,7 @@ class Heater:
         if self.target_temp <= 0.:
             value = 0.
         if ((read_time < self.next_pwm_time or not self.last_pwm_value)
-            and abs(value - self.last_pwm_value) < 0.05):
+            and abs(value - self.last_pwm_value) < (0.05 * value)):
             # No significant change in value - can suppress update
             return
         self.next_pwm_time = read_time + 0.75 * MAX_HEAT_TIME
