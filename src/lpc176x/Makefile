@@ -38,4 +38,4 @@ flash: $(OUT)klipper.bin
 	
 canflash: $(OUT)klipper.bin
 	@echo "  Flashing $< to $(UUID) on $(BUS) via flash_can"
-	$(Q)$(PYTHON) ./klippy/extras/flash_can.py -i $(BUS) -u "$(UUID)" -f $(OUT)klipper.bin
+	$(Q)$(PYTHON) ./lib/canboot/flash_can.py -i $(BUS) -u "$(UUID)" -f $(OUT)klipper.bin
