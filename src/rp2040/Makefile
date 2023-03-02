@@ -71,3 +71,7 @@ lib/rp2040_flash/rp2040_flash:
 flash: $(rptarget-y) lib/rp2040_flash/rp2040_flash
 	@echo "  Flashing $< to $(FLASH_DEVICE)"
 	$(Q)$(PYTHON) ./scripts/flash_usb.py -t $(CONFIG_MCU) -d "$(FLASH_DEVICE)" $(if $(NOSUDO),--no-sudo) $(rptarget-y)
+
+canflash: $(rptarget-y) lib/rp2040_flash/rp2040_flash
+	@echo "  Flashing $< to $(UUID) via flash_can"
+	$(Q)$(PYTHON) ./scripts/flash_can_helper.py -i $(BUS) -u $(UUID) $(rptarget-y)
