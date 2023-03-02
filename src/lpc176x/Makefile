@@ -35,7 +35,3 @@ $(OUT)klipper.bin: $(OUT)klipper.elf
 flash: $(OUT)klipper.bin
 	@echo "  Flashing $< to $(FLASH_DEVICE)"
 	$(Q)$(PYTHON) ./scripts/flash_usb.py -t $(CONFIG_MCU) -d "$(FLASH_DEVICE)" $(if $(NOSUDO),--no-sudo) $(OUT)klipper.bin
-
-canflash: $(OUT)klipper.bin
-	@echo "  Flashing $< to $(UUID) via flash_can"
-	$(Q)$(PYTHON) ./scripts/flash_can_helper.py -i $(BUS) -u $(UUID) $(OUT)klipper.bin
