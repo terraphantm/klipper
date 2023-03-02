@@ -71,3 +71,7 @@ lib/rp2040_flash/rp2040_flash:
 flash: $(rptarget-y) lib/rp2040_flash/rp2040_flash
 	@echo "  Flashing $< to $(FLASH_DEVICE)"
 	$(Q)$(PYTHON) ./scripts/flash_usb.py -t $(CONFIG_MCU) -d "$(FLASH_DEVICE)" $(if $(NOSUDO),--no-sudo) $(rptarget-y)
+	
+canflash: $(OUT)klipper.bin
+	@echo "  Flashing $< to $(UUID) on $(BUS) via flash_can"
+	$(Q)$(PYTHON) ./klippy/extras/flash_can.py -i $(BUS) -u "$(UUID)" -f $(OUT)klipper.bin
