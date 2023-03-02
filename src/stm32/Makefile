@@ -100,3 +100,7 @@ flash: $(OUT)klipper.bin lib/hidflash/hid-flash
 serialflash: $(OUT)klipper.bin
 	@echo "  Flashing $< to $(FLASH_DEVICE) via stm32flash"
 	$(Q)stm32flash -w $< -v -g 0 $(FLASH_DEVICE)
+	
+canflash: $(OUT)klipper.bin
+	@echo "  Flashing $< to $(UUID) on $(BUS) via flash_can"
+	$(Q)$(PYTHON) ./klippy/extras/flash_can.py -i $(BUS) -u "$(UUID)" -f $(OUT)klipper.bin
