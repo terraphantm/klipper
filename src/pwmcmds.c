@@ -105,6 +105,29 @@ command_queue_pwm_out(uint32_t *args)
 DECL_COMMAND(command_queue_pwm_out, "queue_pwm_out oid=%c clock=%u value=%hu");
 
 void
+command_pwm_out_immediate(uint32_t *args)
+{
+    struct pwm_out_s *p = oid_lookup(args[0], command_config_pwm_out);
+    uint16_t value = args[1];
+    gpio_pwm_write(p->pin, value);
+
+    if (move_queue_empty(&p->mq)) {
+        if (value != p->default_value && p->max_duration) {
+            // (Re)Start the safety timeout
+            sched_del_timer(&p->timer);
+            p->timer.waketime = timer_read_time() + p->max_duration;
+            p->timer.func = pwm_end_event;
+            sched_add_timer(&p->timer);
+        } else {
+            // Kill the saftey timeout, we're in a safe state
+            sched_del_timer(&p->timer);
+            p->timer.func = NULL;
+        }
+    }
+}
+DECL_COMMAND(command_pwm_out_immediate, "pwm_out_immediate oid=%c value=%hu");
+
+void
 pwm_shutdown(void)
 {
     uint8_t i;

@@ -25,7 +25,6 @@ class Heater:
         self.max_temp = config.getfloat('max_temp', above=self.min_temp)
         self.sensor.setup_minmax(self.min_temp, self.max_temp)
         self.sensor.setup_callback(self.temperature_callback)
-        self.pwm_delay = self.sensor.get_report_time_delta()
         # Setup temperature checks
         self.min_extrude_temp = config.getfloat(
             'min_extrude_temp', 170.,
@@ -50,9 +49,11 @@ class Heater:
         heater_pin = config.get('heater_pin')
         ppins = self.printer.lookup_object('pins')
         self.mcu_pwm = ppins.setup_pin('pwm', heater_pin)
+        sensor_report_time = self.sensor.get_report_time_delta()
         pwm_cycle_time = config.getfloat('pwm_cycle_time', 0.100, above=0.,
-                                         maxval=self.pwm_delay)
-        self.mcu_pwm.setup_cycle_time(pwm_cycle_time)
+                                         maxval=sensor_report_time)
+        hardware_pwm = config.getboolean('hardware_pwm', False)
+        self.mcu_pwm.setup_cycle_time(pwm_cycle_time, hardware_pwm)
         self.mcu_pwm.setup_max_duration(MAX_HEAT_TIME)
         # Load additional modules
         self.printer.load_object(config, "verify_heater %s" % (self.name,))
@@ -65,15 +66,14 @@ class Heater:
         if self.target_temp <= 0.:
             value = 0.
         if ((read_time < self.next_pwm_time or not self.last_pwm_value)
-            and abs(value - self.last_pwm_value) < 0.05):
+            and abs(value - self.last_pwm_value) < (0.05 * value)):
             # No significant change in value - can suppress update
             return
-        pwm_time = read_time + self.pwm_delay
-        self.next_pwm_time = pwm_time + 0.75 * MAX_HEAT_TIME
+        self.next_pwm_time = read_time + 0.75 * MAX_HEAT_TIME
         self.last_pwm_value = value
-        self.mcu_pwm.set_pwm(pwm_time, value)
+        self.mcu_pwm.set_pwm_immediate(value)
         #logging.debug("%s: pwm=%.3f@%.3f (from %.3f@%.3f [%.3f])",
-        #              self.name, value, pwm_time,
+        #              self.name, value, read_time,
         #              self.last_temp, self.last_temp_time, self.target_temp)
     def temperature_callback(self, read_time, temp):
         with self.lock:
@@ -87,8 +87,6 @@ class Heater:
             self.can_extrude = (self.smoothed_temp >= self.min_extrude_temp)
         #logging.debug("temp: %.3f %f = %f", read_time, temp)
     # External commands
-    def get_pwm_delay(self):
-        return self.pwm_delay
     def get_max_power(self):
         return self.max_power
     def get_smooth_time(self):

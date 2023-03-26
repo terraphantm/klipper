@@ -196,9 +196,17 @@ only of interest to developers looking to gain insight into Klipper.
   Otherwise, 'on_ticks' should be either 0 (for low voltage) or 1 (for
   high voltage).
 
+* `update_digital_out_pwm_value oid=%c on_ticks=%u` : This command
+  provides immediate control for digital pins configured to perform
+  software PWM functionality. See 'queue_digital_out' for more info.
+
 * `queue_pwm_out oid=%c clock=%u value=%hu` : Schedules a change to a
   hardware PWM output pin. See the 'queue_digital_out' and
   'config_pwm_out' commands for more info.
+
+* `pwm_out_immediate oid=%c value=%hu` : This command provides
+  immediate control for hardware PWM pins. See the 'queue_digital_out'
+  and 'config_pwm_out' commands for more info.
 
 * `query_analog_in oid=%c clock=%u sample_ticks=%u sample_count=%c
   rest_ticks=%u min_value=%hu max_value=%hu` : This command sets up a
